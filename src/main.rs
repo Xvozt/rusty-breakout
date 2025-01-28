@@ -30,6 +30,25 @@ async fn main() {
             ball_pos = paddle_pos + vec2(paddle_size.x / 2.0 - ball_size.x / 2.0, -ball_size.y);
         } else {
             ball_pos += ball_velocity * get_frame_time();
+
+            if ball_pos.x < 0.0 {
+                ball_velocity.x *= -1.0;
+                ball_pos.x = 0.0;
+            }
+
+            if ball_pos.x + ball_size.x > screen_width() {
+                ball_velocity.x *= -1.0;
+                ball_pos.x = screen_width() - ball_size.x;
+            }
+
+            if ball_pos.y < 0.0 {
+                ball_velocity.y *= -1.0;
+                ball_pos.y = 0.0;
+            }
+            if ball_pos.y + ball_size.y > screen_height() {
+                ball_velocity.y *= -1.0;
+                ball_pos.y = screen_height() - ball_size.y; // Typically, this would mean game over or lose a life
+            }
         }
 
         clear_background(WHITE);
