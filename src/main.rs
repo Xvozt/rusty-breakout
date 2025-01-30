@@ -1,68 +1,90 @@
-use macroquad::prelude::*;
+use macroquad::{input::KeyCode, prelude::*};
+
+const PLAYER_SIZE: Vec2 = vec2(150f32, 40f32);
+const PLAYER_SPEED: f32 = 700f32;
+const BRICK_SIZE: Vec2 = vec2(100f32, 40f32);
+
+struct Player {
+    rect: Rect,
+}
+
+struct Brick {
+    rect: Rect,
+}
+
+impl Player {
+    pub fn new() -> Self {
+        Player {
+            rect: Rect::new(
+                screen_width() * 0.5f32 - PLAYER_SIZE.x * 0.5f32,
+                screen_height() - 100f32,
+                PLAYER_SIZE.x,
+                PLAYER_SIZE.y,
+            ),
+        }
+    }
+
+    pub fn draw(&self) {
+        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, BLUE);
+    }
+
+    pub fn update(&mut self, dt: f32) {
+        let horizontal_move = match (is_key_down(KeyCode::Left), is_key_down(KeyCode::Right)) {
+            (true, false) => -1f32,
+            (false, true) => 1f32,
+            _ => 0f32,
+        };
+
+        self.rect.x += horizontal_move * dt * PLAYER_SPEED;
+
+        if self.rect.x < 0f32 {
+            self.rect.x = 0f32;
+        }
+
+        if self.rect.x > screen_width() - self.rect.w {
+            self.rect.x = screen_width() - self.rect.w;
+        }
+    }
+}
+
+impl Brick {
+    pub fn new(pos: Vec2) -> Self {
+        Brick {
+            rect: Rect::new(pos.x, pos.y, BRICK_SIZE.x, BRICK_SIZE.y),
+        }
+    }
+
+    pub fn draw(&self) {
+        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, GREEN);
+    }
+}
 
 #[macroquad::main("Breakout")]
 async fn main() {
-    let mut paddle_pos = vec2(screen_width() / 2.0 - 60.0, screen_height() - 50.0);
-    let paddle_size = vec2(120.0, 20.0);
-    let paddle_speed = 500.0;
+    let mut player = Player::new();
+    let mut bricks = Vec::new();
 
-    let ball_size = vec2(20.0, 20.0);
-    let mut ball_pos = paddle_pos + vec2(paddle_size.x / 2.0 - ball_size.x / 2.0, -ball_size.y);
-    let mut ball_velocity = vec2(0.0, 0.0);
-    let ball_speed = 350.0;
+    let (width, height) = (6, 5);
+    let padding = 5f32;
+    let brick_total_size = BRICK_SIZE + vec2(padding, padding);
+    let board_start_pos = vec2(
+        (screen_width() - (brick_total_size.x * width as f32)) * 0.5f32,
+        50f32,
+    );
 
-    let mut ball_stuck_to_paddle = true;
+    for i in 0..width * height {
+        let brick_x = (i % width) as f32 * brick_total_size.x;
+        let brick_y = (i / width) as f32 * brick_total_size.y;
+        bricks.push(Brick::new(board_start_pos + vec2(brick_x, brick_y)));
+    }
 
     loop {
-        if is_key_down(KeyCode::Left) && paddle_pos.x > 0.0 {
-            paddle_pos.x -= paddle_speed * get_frame_time();
-        }
-        if is_key_down(KeyCode::Right) && paddle_pos.x < screen_width() - paddle_size.x {
-            paddle_pos.x += paddle_speed * get_frame_time();
-        }
-
-        if ball_stuck_to_paddle && is_key_pressed(KeyCode::Space) {
-            ball_velocity = vec2(ball_speed, -ball_speed);
-            ball_stuck_to_paddle = false;
-        }
-
-        if ball_stuck_to_paddle {
-            ball_pos = paddle_pos + vec2(paddle_size.x / 2.0 - ball_size.x / 2.0, -ball_size.y);
-        } else {
-            ball_pos += ball_velocity * get_frame_time();
-
-            if ball_pos.x < 0.0 {
-                ball_velocity.x *= -1.0;
-                ball_pos.x = 0.0;
-            }
-
-            if ball_pos.x + ball_size.x > screen_width() {
-                ball_velocity.x *= -1.0;
-                ball_pos.x = screen_width() - ball_size.x;
-            }
-
-            if ball_pos.y < 0.0 {
-                ball_velocity.y *= -1.0;
-                ball_pos.y = 0.0;
-            }
-            if ball_pos.y + ball_size.y > screen_height() {
-                ball_velocity.y *= -1.0;
-                ball_pos.y = screen_height() - ball_size.y; // Typically, this would mean game over or lose a life
-            }
-        }
-
+        player.update(get_frame_time());
         clear_background(WHITE);
-
-        draw_rectangle(
-            paddle_pos.x,
-            paddle_pos.y,
-            paddle_size.x,
-            paddle_size.y,
-            BLUE,
-        );
-
-        draw_rectangle(ball_pos.x, ball_pos.y, ball_size.x, ball_size.y, RED);
-
+        player.draw();
+        for brick in bricks.iter() {
+            brick.draw();
+        }
         next_frame().await;
     }
 }
